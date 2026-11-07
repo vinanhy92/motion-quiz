@@ -1,0 +1,1283 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MOTION QUIZ: Adrenaline Class Edition</title>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts: Plus Jakarta Sans & Outfit -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;700;800&family=Outfit:wght@700;800;900&display=swap" rel="stylesheet">
+    
+    <!-- MediaPipe Pose Libraries (Updated for Stable WASM Load) -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.4/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1675469404/pose.js" crossorigin="anonymous"></script>
+
+    <!-- PURE CUSTOM CSS FOR IFP BROWSER COMPATIBILITY (Anti-Fail / Offline Ready) -->
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            user-select: none;
+            background: #090d16;
+            background: radial-gradient(circle at top center, #1e1b4b 0%, #0f172a 60%, #020617 100%);
+            color: #f8fafc;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        .font-heading { font-family: 'Outfit', sans-serif; }
+        
+        /* Header & Navigation */
+        header {
+            height: 64px;
+            background: rgba(15, 23, 42, 0.95);
+            border-bottom: 1px solid rgba(99, 102, 241, 0.3);
+            padding: 0 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            z-index: 30;
+            shrink: 0;
+        }
+        .brand-logo {
+            width: 40px; height: 40px; border-radius: 14px;
+            background: linear-gradient(135deg, #06b6d4, #6366f1, #d946ef);
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 0 15px rgba(99, 102, 241, 0.5);
+        }
+        .header-title {
+            font-family: 'Outfit', sans-serif; font-weight: 900; font-size: 20px;
+            background: linear-gradient(90deg, #38bdf8, #f0abfc, #fcd34d);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+        
+        /* Main Layout */
+        main { flex: 1; position: relative; overflow: hidden; padding: 20px; display: flex; flex-direction: column; }
+        .hidden { display: none !important; }
+        
+        /* Cards & Containers */
+        .glass-card {
+            background: rgba(15, 23, 42, 0.85);
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            border-radius: 24px;
+            padding: 24px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+            backdrop-filter: blur(12px);
+        }
+        
+        /* Option Cards for IFP */
+        .grid-options { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; width: 100%; margin: auto 0; }
+        .option-card {
+            position: relative;
+            background: linear-gradient(180deg, rgba(15, 23, 42, 0.9), rgba(2, 6, 23, 0.95));
+            border: 3px solid rgba(148, 163, 184, 0.3);
+            border-radius: 28px;
+            padding: 24px;
+            height: 260px;
+            display: flex; flex-direction: column; justify-content: space-between;
+            transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .option-card.card-left { border-color: rgba(56, 189, 248, 0.5); }
+        .option-card.card-right { border-color: rgba(251, 146, 60, 0.5); }
+        .option-card.active { transform: scale(1.03) translateY(-4px); }
+        .card-left-active {
+            box-shadow: 0 0 50px rgba(56, 189, 248, 0.8), inset 0 0 20px rgba(56, 189, 248, 0.3);
+            border-color: #38bdf8 !important;
+        }
+        .card-right-active {
+            box-shadow: 0 0 50px rgba(251, 146, 60, 0.8), inset 0 0 20px rgba(251, 146, 60, 0.3);
+            border-color: #fb923c !important;
+        }
+        
+        .progress-track { width: 100%; background: #020617; border-radius: 999px; height: 16px; overflow: hidden; padding: 2px; border: 1px solid rgba(255,255,255,0.1); }
+        .progress-bar-fill { height: 100%; border-radius: 999px; width: 0%; transition: width 0.1s linear; }
+        .fill-left { background: linear-gradient(90deg, #38bdf8, #3b82f6); }
+        .fill-right { background: linear-gradient(90deg, #fb923c, #f43f5e); }
+        
+        /* Buttons */
+        .btn-action {
+            background: linear-gradient(135deg, #06b6d4, #6366f1, #d946ef);
+            color: #ffffff; font-family: 'Outfit', sans-serif; font-weight: 900; font-size: 20px;
+            padding: 16px 32px; border-radius: 20px; border: none; cursor: pointer;
+            box-shadow: 0 10px 25px rgba(99, 102, 241, 0.4);
+            transition: transform 0.2s; display: flex; align-items: center; justify-content: center; gap: 12px; width: 100%;
+        }
+        .btn-action:active { transform: scale(0.98); }
+        
+        .btn-tab {
+            padding: 10px 24px; border-radius: 14px; border: none; background: transparent;
+            color: #94a3b8; font-weight: 800; font-size: 13px; cursor: pointer; transition: all 0.2s;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .btn-tab.active {
+            background: linear-gradient(135deg, #6366f1, #a855f7); color: #ffffff;
+            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
+        }
+        
+        .btn-nav {
+            padding: 8px 16px; border-radius: 12px; background: rgba(30, 41, 59, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.15); color: #f8fafc; font-size: 12px; font-weight: 700;
+            cursor: pointer; display: flex; align-items: center; gap: 8px;
+        }
+
+        /* Inputs & Selects */
+        select, input, textarea {
+            width: 100%; background: #020617; border: 2px solid rgba(99, 102, 241, 0.4);
+            border-radius: 14px; padding: 12px 16px; color: #ffffff; font-weight: 700; font-size: 14px;
+            outline: none; margin-top: 6px;
+        }
+        select:focus, input:focus { border-color: #d946ef; }
+        
+        .mirror-canvas { transform: scaleX(-1); }
+        
+        .custom-scroll::-webkit-scrollbar { width: 6px; }
+        .custom-scroll::-webkit-scrollbar-track { background: #090d16; border-radius: 4px; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+
+        /* Badges */
+        .badge-pill {
+            display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 999px;
+            font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px;
+            background: rgba(217, 70, 239, 0.15); border: 1px solid rgba(217, 70, 239, 0.4); color: #f0abfc;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- HEADER / TOP NAV -->
+    <header>
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <div class="brand-logo">
+                <i class="fa-solid fa-bolt" style="color: white; font-size: 18px;"></i>
+            </div>
+            <div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span class="header-title">MOTION QUIZ</span>
+                </div>
+                <p style="font-size: 10px; color: #a5b4fc; font-weight: 700; letter-spacing: 0.5px;">ALL-GRADE INTERACTIVE GAME (SD • SMP • SMA)</p>
+            </div>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <button id="btn-toggle-mirror" class="btn-nav">
+                <i class="fa-solid fa-camera-rotate" style="color: #38bdf8;"></i>
+                <span id="label-mirror-status">Kamera: Cermin</span>
+            </button>
+            <button id="btn-toggle-audio" class="btn-nav" style="padding: 8px 12px;">
+                <i class="fa-solid fa-volume-high"></i>
+            </button>
+            <button id="btn-go-home" class="btn-action" style="font-size: 12px; padding: 8px 18px; width: auto; border-radius: 12px;">
+                <i class="fa-solid fa-house"></i> Beranda
+            </button>
+        </div>
+    </header>
+
+    <!-- MAIN CONTAINER -->
+    <main>
+        
+        <!-- ==================== SCREEN 1: BERANDA / MENU UTAMA ==================== -->
+        <section id="screen-home" style="width: 100%; height: 100%; display: flex; flex-direction: column; max-width: 900px; margin: 0 auto; overflow-y: auto;" class="custom-scroll">
+            
+            <div style="text-align: center; margin: 8px 0;">
+                <span class="badge-pill" style="margin-bottom: 8px;">⚡ AI Motion-Sensing Quiz Platform • Semua Jenjang</span>
+                <h2 class="font-heading" style="font-size: 32px; font-weight: 900; color: white;">
+                    Main Kuis Seru Tanpa Pencet-Pencet! 🚀
+                </h2>
+            </div>
+
+            <!-- Tab Navigation Header -->
+            <div style="display: flex; justify-center; margin: 12px auto;">
+                <div style="background: rgba(15, 23, 42, 0.9); border: 1px solid rgba(99, 102, 241, 0.3); padding: 6px; border-radius: 16px; display: flex; gap: 8px;">
+                    <button id="tab-btn-play" class="btn-tab active">
+                        <i class="fa-solid fa-gamepad"></i> 🎮 Pilih & Mainkan
+                    </button>
+                    <button id="tab-btn-studio" class="btn-tab">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i> 🛠️ Studio Kuis Guru
+                    </button>
+                </div>
+            </div>
+
+            <!-- TAB CONTENT 1: MAIN GAME -->
+            <div id="tab-content-play" class="glass-card" style="max-width: 580px; margin: auto; width: 100%; display: flex; flex-direction: column; gap: 16px;">
+                <div>
+                    <label style="font-size: 11px; font-weight: 900; color: #38bdf8; text-transform: uppercase; letter-spacing: 1px; display: flex; align-items: center; gap: 6px; margin-bottom: 4px;">
+                        <i class="fa-solid fa-layer-group"></i> 1. PILIH PAKET SOAL TERSIMPAN
+                    </label>
+                    <select id="select-subject">
+                        <!-- Options loaded dynamically -->
+                    </select>
+                </div>
+
+                <!-- Filter Pilihan Kustom (Mapel, Kelas, Materi) -->
+                <div style="background: rgba(2, 6, 23, 0.5); border: 1px dashed rgba(99, 102, 241, 0.4); border-radius: 16px; padding: 14px; display: flex; flex-direction: column; gap: 12px;">
+                    <div style="font-size: 11px; font-weight: 800; color: #f0abfc; text-transform: uppercase; letter-spacing: 0.5px;">
+                        <i class="fa-solid fa-sliders"></i> ATAU FILTER SESUAI KEBUTUHAN:
+                    </div>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <div>
+                            <label style="font-size: 10px; font-weight: 700; color: #94a3b8;">Mata Pelajaran</label>
+                            <select id="play-filter-mapel">
+                                <option value="ALL">✨ Semua Mapel</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label style="font-size: 10px; font-weight: 700; color: #94a3b8;">Tingkat Kelas</label>
+                            <select id="play-filter-kelas">
+                                <option value="ALL">🎓 Semua Kelas</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label style="font-size: 10px; font-weight: 700; color: #94a3b8;">Materi / Bab Spesifik</label>
+                        <select id="play-filter-materi">
+                            <option value="ALL">📖 Semua Bab / Materi</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div style="background: rgba(2, 6, 23, 0.85); border: 1px solid rgba(99, 102, 241, 0.3); border-radius: 16px; padding: 16px;">
+                    <div style="display: flex; justify-content: space-between; align-size: 11px; color: #a5b4fc; font-weight: 700;">
+                        <span><i class="fa-solid fa-circle-info" style="color: #38bdf8;"></i> Detail Kuis Aktif:</span>
+                        <span id="info-quiz-meta" style="color: #f0abfc; font-weight: 900;">10 Soal Tersimpan</span>
+                    </div>
+                    <div id="info-quiz-title" class="font-heading" style="font-size: 20px; font-weight: 900; color: white; margin-top: 6px;">Pendidikan Pancasila</div>
+                    <div id="info-quiz-subdetail" style="font-size: 11px; color: #cbd5e1; font-weight: 600; margin-top: 2px;">Bab: Sejarah Kelahiran Pancasila</div>
+                    <div style="font-size: 11px; color: #34d399; font-weight: 700; margin-top: 6px;">
+                        ● Multi-Player Motion Ready • Sensor Presisi
+                    </div>
+                </div>
+
+                <button id="btn-start-game" class="btn-action">
+                    <i class="fa-solid fa-play"></i> GAS MAIN SEKARANG!
+                </button>
+            </div>
+
+            <!-- TAB CONTENT 2: STUDIO GURU (Clean Hidden State) -->
+            <div id="tab-content-studio" class="glass-card hidden" style="max-width: 750px; margin: 0 auto; width: 100%; flex-direction: column; gap: 16px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 12px;">
+                    <div>
+                        <h3 class="font-heading" style="font-size: 18px; font-weight: 900; color: white;">Studio Pembuat Kuis Kustom</h3>
+                        <p style="font-size: 11px; color: #94a3b8;">Buat & edit soal untuk jenjang SD, SMP, SMA, maupun Umum</p>
+                    </div>
+                    <div style="display: flex; gap: 8px;">
+                        <button id="btn-new-package" class="btn-nav" style="background: #4f46e5; border: none; padding: 8px 14px;">
+                            <i class="fa-solid fa-plus"></i> Paket Baru
+                        </button>
+                        <button id="btn-delete-package" class="btn-nav" style="background: rgba(244, 63, 94, 0.15); color: #fda4af; border-color: rgba(244, 63, 94, 0.3); padding: 8px 14px;">
+                            <i class="fa-solid fa-trash"></i> Hapus
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Meta Form -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 12px;">
+                    <div>
+                        <label style="font-size: 11px; font-weight: 700; color: #cbd5e1;">Mata Pelajaran</label>
+                        <input id="input-quiz-subject" type="text" value="Pendidikan Pancasila">
+                    </div>
+                    <div>
+                        <label style="font-size: 11px; font-weight: 700; color: #cbd5e1;">Materi Spesifik / Bab</label>
+                        <input id="input-quiz-materi" type="text" value="Sejarah Kelahiran Pancasila">
+                    </div>
+                    <div>
+                        <label style="font-size: 11px; font-weight: 700; color: #cbd5e1;">Tingkat Kelas / Jenjang</label>
+                        <select id="select-quiz-grade">
+                            <optgroup label="Sekolah Dasar (SD)">
+                                <option value="Kelas 1 SD">Kelas 1 SD</option>
+                                <option value="Kelas 2 SD">Kelas 2 SD</option>
+                                <option value="Kelas 3 SD">Kelas 3 SD</option>
+                                <option value="Kelas 4 SD">Kelas 4 SD</option>
+                                <option value="Kelas 5 SD">Kelas 5 SD</option>
+                                <option value="Kelas 6 SD">Kelas 6 SD</option>
+                            </optgroup>
+                            <optgroup label="Sekolah Menengah Pertama (SMP)">
+                                <option value="Kelas 7 SMP" selected>Kelas 7 SMP</option>
+                                <option value="Kelas 8 SMP">Kelas 8 SMP</option>
+                                <option value="Kelas 9 SMP">Kelas 9 SMP</option>
+                            </optgroup>
+                            <optgroup label="Sekolah Menengah Atas (SMA/SMK)">
+                                <option value="Kelas 10 SMA">Kelas 10 SMA/SMK</option>
+                                <option value="Kelas 11 SMA">Kelas 11 SMA/SMK</option>
+                                <option value="Kelas 12 SMA">Kelas 12 SMA/SMK</option>
+                            </optgroup>
+                            <optgroup label="Lainnya">
+                                <option value="Umum & Komunitas">Umum & Komunitas</option>
+                            </optgroup>
+                        </select>
+                    </div>
+                    <div>
+                        <label style="font-size: 11px; font-weight: 700; color: #cbd5e1;">Jml Soal Dimainkan</label>
+                        <input id="input-max-questions" type="number" min="1" max="50" value="10">
+                    </div>
+                </div>
+
+                <!-- Daftar Pertanyaan Editor -->
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;">
+                    <label style="font-size: 11px; font-weight: 900; color: #a5b4fc; text-transform: uppercase;">
+                        Daftar Soal (<span id="question-count-badge">0</span>)
+                    </label>
+                    <div style="display: flex; gap: 8px;">
+                        <button id="btn-import-gemini" class="btn-nav" style="background: #1e293b; color: #38bdf8;">
+                            <i class="fa-solid fa-wand-magic-sparkles"></i> Impor JSON Gemini
+                        </button>
+                        <button id="btn-add-question" class="btn-nav" style="background: #c026d3; color: white; border: none;">
+                            <i class="fa-solid fa-plus"></i> Tambah Soal
+                        </button>
+                    </div>
+                </div>
+
+                <div id="container-questions-list" class="custom-scroll" style="max-height: 240px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; background: rgba(2, 6, 23, 0.7); padding: 12px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.05);">
+                    <!-- Dynamic Question Items -->
+                </div>
+            </div>
+
+        </section>
+
+        <!-- ==================== SCREEN 2: GAMEPLAY (KUIS AKTIF) ==================== -->
+        <section id="screen-gameplay" class="hidden" style="width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: space-between; max-width: 1000px; margin: 0 auto; position: relative;">
+            
+            <!-- Top HUD Bar -->
+            <div class="glass-card" style="padding: 16px 24px; display: flex; align-items: center; justify-content: space-between;">
+                <div style="display: flex; align-items: center; gap: 16px;">
+                    <span id="hud-question-number" class="font-heading" style="padding: 8px 16px; border-radius: 14px; background: linear-gradient(90deg, #38bdf8, #2563eb); color: #020617; font-weight: 900; font-size: 14px;">
+                        SOAL 1/10
+                    </span>
+                    <div>
+                        <span id="hud-materi-title" style="font-size: 11px; color: #f0abfc; font-weight: 800; text-transform: uppercase; display: block;">PENDIDIKAN PANCASILA</span>
+                        <span id="hud-kelas-subtitle" style="font-size: 11px; color: #94a3b8; font-weight: 600;">Kelas 7 SMP</span>
+                    </div>
+                </div>
+
+                <div>
+                    <span style="font-size: 10px; color: #94a3b8; font-weight: 900; text-transform: uppercase;">TOTAL SKOR</span>
+                    <div id="hud-score" class="font-heading" style="font-size: 32px; font-weight: 900; color: #fbbf24; text-shadow: 0 0 10px rgba(251, 191, 36, 0.4);">0</div>
+                </div>
+            </div>
+
+            <!-- Area Teks Soal Utama -->
+            <div class="glass-card" style="text-align: center; padding: 20px 24px; margin: 12px 0; min-height: 110px; display: flex; align-items: center; justify-content: center;">
+                <h2 id="hud-question-text" class="font-heading" style="font-size: 24px; font-weight: 800; color: white; line-height: 1.4; transition: font-size 0.2s ease;">
+                    Memuat pertanyaan...
+                </h2>
+            </div>
+
+            <!-- Opsi Jawaban Kanan & Kiri -->
+            <div class="grid-options">
+                
+                <!-- OPSI KIRI (A) -->
+                <div id="card-option-left" class="option-card card-left">
+                    <div style="display: flex; align-items: center; justify-content: space-between;">
+                        <span class="font-heading" style="padding: 6px 14px; border-radius: 10px; background: #38bdf8; color: #020617; font-weight: 900; font-size: 13px;">
+                            <i class="fa-solid fa-arrow-left"></i> KIRI (A)
+                        </span>
+                        <span style="font-size: 11px; font-weight: 900; color: #38bdf8;">
+                            <i class="fa-solid fa-person-walking-arrow-loop-left"></i> MIRING KIRI
+                        </span>
+                    </div>
+                    
+                    <div id="text-option-left" class="font-heading" style="font-size: 22px; font-weight: 800; color: white; text-align: center;">
+                        Jawaban A
+                    </div>
+
+                    <div class="progress-track">
+                        <div id="progress-fill-left" class="progress-bar-fill fill-left"></div>
+                    </div>
+                </div>
+
+                <!-- OPSI KANAN (B) -->
+                <div id="card-option-right" class="option-card card-right">
+                    <div style="display: flex; align-items: center; justify-content: space-between;">
+                        <span style="font-size: 11px; font-weight: 900; color: #fb923c;">
+                            MIRING KANAN <i class="fa-solid fa-person-walking-arrow-loop-right"></i>
+                        </span>
+                        <span class="font-heading" style="padding: 6px 14px; border-radius: 10px; background: #fb923c; color: #020617; font-weight: 900; font-size: 13px;">
+                            KANAN (B) <i class="fa-solid fa-arrow-right"></i>
+                        </span>
+                    </div>
+                    
+                    <div id="text-option-right" class="font-heading" style="font-size: 22px; font-weight: 800; color: white; text-align: center;">
+                        Jawaban B
+                    </div>
+
+                    <div class="progress-track">
+                        <div id="progress-fill-right" class="progress-bar-fill fill-right"></div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Indicator Zone Status -->
+            <div style="display: flex; justify-content: center; gap: 12px; margin-top: 10px;">
+                <div id="badge-current-zone" class="badge-pill" style="background: #4f46e5; color: white; border: none; padding: 6px 16px; font-size: 12px;">
+                    POSISI: TENGAH
+                </div>
+            </div>
+
+            <!-- Feedback Overlay Modal -->
+            <div id="feedback-overlay" class="hidden" style="position: absolute; inset: 0; background: rgba(2, 6, 23, 0.95); border-radius: 28px; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 40;">
+                <div id="feedback-icon-box" style="width: 100px; height: 100px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 48px; margin-bottom: 16px;">
+                    <i class="fa-solid fa-check"></i>
+                </div>
+                <h3 id="feedback-title" class="font-heading" style="font-size: 36px; font-weight: 900; color: white;">BENAR MANTAP! 🎉</h3>
+                <p id="feedback-subtitle" style="color: #e2e8f0; font-size: 18px; font-weight: 800; margin-top: 6px;">+20 Poin</p>
+            </div>
+
+        </section>
+
+        <!-- ==================== SCREEN 3: HASIL AKHIR ==================== -->
+        <section id="screen-result" class="hidden" style="width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; max-width: 500px; margin: 0 auto;">
+            <div class="glass-card" style="width: 100%; text-align: center;">
+                <div style="width: 80px; height: 80px; border-radius: 24px; background: linear-gradient(135deg, #fbbf24, #f97316); margin: 0 auto 16px; display: flex; align-items: center; justify-content: center; font-size: 40px; color: #020617;">
+                    <i class="fa-solid fa-trophy"></i>
+                </div>
+                
+                <h2 class="font-heading" style="font-size: 30px; font-weight: 900; color: white;">KUIS SELESAI 🎉</h2>
+                <p id="result-subject-text" style="font-size: 11px; color: #38bdf8; font-weight: 800; text-transform: uppercase; margin-bottom: 20px;">Pendidikan Pancasila - Kelas 7 SMP</p>
+
+                <div style="background: #020617; padding: 20px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.1); margin-bottom: 20px;">
+                    <div style="font-size: 10px; color: #94a3b8; font-weight: 900; text-transform: uppercase;">SKOR AKHIR KAMU</div>
+                    <div id="result-final-score" class="font-heading" style="font-size: 48px; font-weight: 900; color: #fbbf24;">100</div>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 12px; margin-top: 12px; font-size: 12px;">
+                        <div>
+                            <span style="color: #94a3b8; display: block;">Jawaban Benar</span>
+                            <span id="result-correct-count" style="color: #34d399; font-weight: 900; font-size: 16px;">10/10</span>
+                        </div>
+                        <div>
+                            <span style="color: #94a3b8; display: block;">Akurasi</span>
+                            <span id="result-accuracy" style="color: #38bdf8; font-weight: 900; font-size: 16px;">100%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 12px;">
+                    <button id="btn-restart-game" class="btn-action" style="font-size: 14px; padding: 12px;">
+                        <i class="fa-solid fa-rotate-right"></i> Main Lagi
+                    </button>
+                    <button id="btn-result-home" class="btn-nav" style="flex: 1; justify-content: center; font-size: 14px; padding: 12px;">
+                        <i class="fa-solid fa-house"></i> Beranda
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Floating Camera Feed (PiP Mini Window) -->
+        <div id="camera-container" style="position: fixed; bottom: 16px; right: 16px; width: 180px; height: 130px; border-radius: 16px; overflow: hidden; border: 2px solid #38bdf8; background: #020617; z-index: 50; display: flex; flex-direction: column;">
+            <div style="background: rgba(15, 23, 42, 0.9); padding: 4px 8px; border-bottom: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: space-between; font-size: 9px; color: #94a3b8;">
+                <span style="font-weight: 700; color: white;"><i class="fa-solid fa-video" style="color: #38bdf8;"></i> Motion Sensor</span>
+                <span id="cam-indicator" style="color: #34d399; font-weight: 900;">ACTIVE</span>
+            </div>
+            <div style="position: relative; flex: 1; background: black;">
+                <video id="video-feed" class="hidden" playsinline></video>
+                <canvas id="canvas-pose" class="mirror-canvas" style="width: 100%; height: 100%; object-fit: cover;"></canvas>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Modal Import JSON Gemini -->
+    <div id="modal-import" class="hidden" style="position: fixed; inset: 0; background: rgba(2, 6, 23, 0.9); backdrop-filter: blur(8px); z-index: 50; display: flex; align-items: center; justify-content: center; padding: 16px;">
+        <div class="glass-card" style="max-width: 500px; width: 100%;">
+            <h3 class="font-heading" style="font-size: 18px; font-weight: 900; color: white; margin-bottom: 6px;">Impor Soal dari Gemini</h3>
+            <p style="font-size: 11px; color: #94a3b8; margin-bottom: 12px;">Salin teks format JSON hasil buatan Gemini dan tempel di bawah ini:</p>
+            <textarea id="textarea-import-json" rows="6" placeholder='[{"soal":"...","opsiKiri":"...","opsiKanan":"...","jawabanBenar":"kiri"}]'></textarea>
+            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 12px;">
+                <button id="btn-cancel-import" class="btn-nav">Batal</button>
+                <button id="btn-apply-import" class="btn-action" style="font-size: 12px; padding: 8px 16px; width: auto; border-radius: 12px;">Terapkan Soal</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- JAVASCRIPT LOGIC -->
+    <script>
+        // ... existing soundFX class code ...
+        class SoundFXController {
+            constructor() {
+                this.ctx = null;
+                this.muted = false;
+            }
+            init() {
+                if (!this.ctx) {
+                    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                    this.ctx = new AudioCtx();
+                }
+                if (this.ctx && this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            }
+            playTick() {
+                if (this.muted) return;
+                this.init();
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(600, this.ctx.currentTime);
+                gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.05);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.05);
+            }
+            playCorrect() {
+                if (this.muted) return;
+                this.init();
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(523.25, now);
+                osc.frequency.setValueAtTime(659.25, now + 0.1);
+                osc.frequency.setValueAtTime(783.99, now + 0.2);
+                gain.gain.setValueAtTime(0.3, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.5);
+            }
+            playWrong() {
+                if (this.muted) return;
+                this.init();
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(220, now);
+                osc.frequency.linearRampToValueAtTime(110, now + 0.3);
+                gain.gain.setValueAtTime(0.3, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.3);
+            }
+            playFinish() {
+                if (this.muted) return;
+                this.init();
+                const notes = [440, 554.37, 659.25, 880];
+                notes.forEach((freq, i) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.frequency.value = freq;
+                    gain.gain.setValueAtTime(0.2, this.ctx.currentTime + (i * 0.12));
+                    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + (i * 0.12) + 0.4);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(this.ctx.currentTime + (i * 0.12));
+                    osc.stop(this.ctx.currentTime + (i * 0.12) + 0.4);
+                });
+            }
+        }
+
+        const soundFX = new SoundFXController();
+
+        // DOM ELEMENTS DEKLARASI
+        const screenHome = document.getElementById('screen-home');
+        const screenGameplay = document.getElementById('screen-gameplay');
+        const screenResult = document.getElementById('screen-result');
+
+        const selectSubject = document.getElementById('select-subject');
+        const btnStartGame = document.getElementById('btn-start-game');
+        const btnGoHome = document.getElementById('btn-go-home');
+        const btnToggleMirror = document.getElementById('btn-toggle-mirror');
+        const labelMirrorStatus = document.getElementById('label-mirror-status');
+        const btnToggleAudio = document.getElementById('btn-toggle-audio');
+
+        const tabBtnPlay = document.getElementById('tab-btn-play');
+        const tabBtnStudio = document.getElementById('tab-btn-studio');
+        const tabContentPlay = document.getElementById('tab-content-play');
+        const tabContentStudio = document.getElementById('tab-content-studio');
+
+        const hudQuestionNumber = document.getElementById('hud-question-number');
+        const hudMateriTitle = document.getElementById('hud-materi-title');
+        const hudKelasSubtitle = document.getElementById('hud-kelas-subtitle');
+        const hudScore = document.getElementById('hud-score');
+        const hudQuestionText = document.getElementById('hud-question-text');
+
+        const cardOptionLeft = document.getElementById('card-option-left');
+        const cardOptionRight = document.getElementById('card-option-right');
+        const textOptionLeft = document.getElementById('text-option-left');
+        const textOptionRight = document.getElementById('text-option-right');
+        const progressFillLeft = document.getElementById('progress-fill-left');
+        const progressFillRight = document.getElementById('progress-fill-right');
+
+        const badgeCurrentZone = document.getElementById('badge-current-zone');
+        const feedbackOverlay = document.getElementById('feedback-overlay');
+        const feedbackIconBox = document.getElementById('feedback-icon-box');
+        const feedbackTitle = document.getElementById('feedback-title');
+        const feedbackSubtitle = document.getElementById('feedback-subtitle');
+
+        const questionCountBadge = document.getElementById('question-count-badge');
+        const containerQuestionsList = document.getElementById('container-questions-list');
+
+        // DOM Elements untuk Filter Play
+        const playFilterMapel = document.getElementById('play-filter-mapel');
+        const playFilterKelas = document.getElementById('play-filter-kelas');
+        const playFilterMateri = document.getElementById('play-filter-materi');
+        const infoQuizSubdetail = document.getElementById('info-quiz-subdetail');
+
+        // GAME STATE
+        let currentQuestions = [];
+        let questionIndex = 0;
+        let score = 0;
+        let correctCount = 0;
+        let activeZone = 'TENGAH';
+        let holdStartTime = null;
+        const HOLD_DURATION = 1500;
+        let isAnsweringLocked = false;
+        let isCameraMirrored = true;
+
+        // ==========================================
+        // 2. BANK SOAL LENGKAP KELAS 7 BAB 1 & 2 (8 MAPEL)
+        // ==========================================
+        let quizPackages = {};
+        let activePackageId = null;
+
+        const DEFAULT_CLASS7_PACKAGES = {
+            "pkg_pkn": {
+                id: "pkg_pkn",
+                mapel: "Pendidikan Pancasila",
+                materi: "Sejarah & Nilai Pancasila (Bab 1 & 2)",
+                kelas: "Kelas 7 SMP",
+                maxSoal: 10,
+                soalList: [
+                    { soal: "Kapan BPUPKI pertama kali mengadakan sidang merumuskan dasar negara?", opsiKiri: "29 Mei - 1 Juni 1945", opsiKanan: "17 Agustus 1945", jawabanBenar: "kiri" },
+                    { soal: "Siapa tokoh yang menyampaikan istilah 'Pancasila' pada 1 Juni 1945?", opsiKiri: "Ir. Soekarno", opsiKanan: "Drs. Mohammad Hatta", jawabanBenar: "kiri" },
+                    { soal: "Panitia sembilan menghasilkan rancangan pembukaan dasar negara yang disebut?", opsiKiri: "Piagam Jakarta", opsiKanan: "Dekrit Presiden", jawabanBenar: "kiri" },
+                    { soal: "Sila pertama menurut rumusan Piagam Jakarta yang kemudian diubah adalah?", opsiKiri: "Ketuhanan dengan kewajiban menjalankan syariat Islam", opsiKanan: "Ketuhanan Yang Maha Esa", jawabanBenar: "kiri" },
+                    { soal: "Sikap utama yang diteladani dari para pendiri negara saat merumuskan Pancasila adalah?", opsiKiri: "Mengutamakan kepentingan bersama", opsiKanan: "Mengutamakan golongan pribadi", jawabanBenar: "kiri" },
+                    { soal: "Pancasila berfungsi sebagai pandangan hidup bangsa, artinya?", opsiKiri: "Petunjuk perilaku sehari-hari", opsiKanan: "Hanya dokumen sejarah", jawabanBenar: "kiri" },
+                    { soal: "Menghormati teman yang sedang beribadah merupakan penerapan Sila ke-?", opsiKiri: "Sila Pertama", opsiKanan: "Sila Ketiga", jawabanBenar: "kiri" },
+                    { soal: "Menjaga persatuan dan kebersamaan di sekolah sesuai nilai Sila ke-?", opsiKiri: "Sila Ketiga", opsiKanan: "Sila Kedua", jawabanBenar: "kiri" },
+                    { soal: "Musyawarah untuk mencapai mufakat adalah ciri khas penerapan Sila ke-?", opsiKiri: "Sila Keempat", opsiKanan: "Sila Kelima", jawabanBenar: "kiri" },
+                    { soal: "Menghargai hasil karya orang lain merupakan pengamalan Sila ke-?", opsiKiri: "Sila Kelima", opsiKanan: "Sila Kedua", jawabanBenar: "kiri" }
+                ]
+            },
+            "pkg_ipa": {
+                id: "pkg_ipa",
+                mapel: "IPA",
+                materi: "Hakikat Sains & Perubahan Zat",
+                kelas: "Kelas 7 SMP",
+                maxSoal: 10,
+                soalList: [
+                    { soal: "Langkah pertama dalam metode ilmiah adalah?", opsiKiri: "Melakukan Pengamatan / Observasi", opsiKanan: "Menciptakan Kesimpulan", jawabanBenar: "kiri" },
+                    { soal: "Alat pengukur massa benda dalam SI bertaraf standar adalah?", opsiKiri: "Neraca / Timbangan", opsiKanan: "Thermometer", jawabanBenar: "kiri" },
+                    { soal: "Satuan Internasional (SI) untuk mengukur suhu adalah?", opsiKiri: "Kelvin", opsiKanan: "Celsius", jawabanBenar: "kiri" },
+                    { soal: "Dugaan sementara yang harus diuji kebenarannya lewat eksperimen disebut?", opsiKiri: "Hipotesis", opsiKanan: "Variabel Terikat", jawabanBenar: "kiri" },
+                    { soal: "Simbol bahaya bahan kimia bergambar tengkorak menandakan bahan bersifat?", opsiKiri: "Beracun (Toxic)", opsiKanan: "Mudah Meledak", jawabanBenar: "kiri" },
+                    { soal: "Bentuk dan volume tetap merupakan ciri utama wujud zat?", opsiKiri: "Zat Padat", opsiKanan: "Zat Gas", jawabanBenar: "kiri" },
+                    { soal: "Perubahan wujud zat dari padat menjadi gas langsung disebut?", opsiKiri: "Menyublim", opsiKanan: "Mengembun", jawabanBenar: "kiri" },
+                    { soal: "Mencairnya es batu merupakan contoh perubahan jenis apa?", opsiKiri: "Perubahan Fisika", opsiKanan: "Perubahan Kimia", jawabanBenar: "kiri" },
+                    { soal: "Besi yang berkarat karena reaksi dengan oksigen dan air mengalami perubahan?", opsiKiri: "Perubahan Kimia", opsiKanan: "Perubahan Fisika", jawabanBenar: "kiri" },
+                    { soal: "Rumus massa jenis suatu benda ($\rho$) adalah?", opsiKiri: "Massa dibagi Volume", opsiKanan: "Massa dikali Volume", jawabanBenar: "kiri" }
+                ]
+            }
+        };
+
+        // Fungsi Inisialisasi Paket & Penyimpanan LocalStorage
+        function initQuizPackages() {
+            const savedData = localStorage.getItem('motion_quiz_packages');
+            if (savedData) {
+                try {
+                    quizPackages = JSON.parse(savedData);
+                } catch (e) {
+                    quizPackages = { ...DEFAULT_CLASS7_PACKAGES };
+                }
+            } else {
+                quizPackages = { ...DEFAULT_CLASS7_PACKAGES };
+                savePackagesToStorage();
+            }
+            activePackageId = Object.keys(quizPackages)[0] || 'pkg_pkn';
+        }
+
+        function savePackagesToStorage() {
+            localStorage.setItem('motion_quiz_packages', JSON.stringify(quizPackages));
+        }
+
+        function renderQuestionListEditor() {
+            if (!activePackageId || !quizPackages[activePackageId]) return;
+            const current = quizPackages[activePackageId];
+            questionCountBadge.textContent = current.soalList.length;
+
+            containerQuestionsList.innerHTML = '';
+            current.soalList.forEach((q, idx) => {
+                const item = document.createElement('div');
+                item.style.cssText = "background: rgba(15, 23, 42, 0.9); padding: 10px 14px; border-radius: 12px; border: 1px solid rgba(99, 102, 241, 0.2); display: flex; flex-direction: column; gap: 8px;";
+                
+                item.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-size: 11px; font-weight: 800; color: #38bdf8;">SOAL #${idx + 1}</span>
+                        <button onclick="deleteQuestionItem(${idx})" class="btn-nav" style="background: rgba(244, 63, 94, 0.2); color: #fda4af; border: none; padding: 4px 8px; font-size: 10px;">
+                            <i class="fa-solid fa-trash"></i> Hapus
+                        </button>
+                    </div>
+                    <input type="text" value="${q.soal.replace(/"/g, '&quot;')}" onchange="updateQuestionField(${idx}, 'soal', this.value)" placeholder="Teks Pertanyaan">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 100px; gap: 8px;">
+                        <input type="text" value="${q.opsiKiri.replace(/"/g, '&quot;')}" onchange="updateQuestionField(${idx}, 'opsiKiri', this.value)" placeholder="Opsi Kiri (A)">
+                        <input type="text" value="${q.opsiKanan.replace(/"/g, '&quot;')}" onchange="updateQuestionField(${idx}, 'opsiKanan', this.value)" placeholder="Opsi Kanan (B)">
+                        <select onchange="updateQuestionField(${idx}, 'jawabanBenar', this.value)">
+                            <option value="kiri" ${q.jawabanBenar === 'kiri' ? 'selected' : ''}>KIRI (A)</option>
+                            <option value="kanan" ${q.jawabanBenar === 'kanan' ? 'selected' : ''}>KANAN (B)</option>
+                        </select>
+                    </div>
+                `;
+                containerQuestionsList.appendChild(item);
+            });
+        }
+
+        function updateQuestionField(index, field, value) {
+            if (quizPackages[activePackageId] && quizPackages[activePackageId].soalList[index]) {
+                quizPackages[activePackageId].soalList[index][field] = value;
+                savePackagesToStorage();
+                updateStudioUI();
+            }
+        }
+
+        function deleteQuestionItem(index) {
+            if (quizPackages[activePackageId]) {
+                quizPackages[activePackageId].soalList.splice(index, 1);
+                savePackagesToStorage();
+                updateStudioUI();
+            }
+        }
+
+        function renderPackageDropdown() {
+            selectSubject.innerHTML = '';
+            
+            // Render Pilihan Paket Utama
+            Object.values(quizPackages).forEach(pkg => {
+                const opt = document.createElement('option');
+                opt.value = pkg.id;
+                const mapelName = pkg.mapel || pkg.materi || "Kuis";
+                const materiName = pkg.materi || "";
+                opt.textContent = `📚 ${mapelName} - ${materiName} (${pkg.kelas})`;
+                if (pkg.id === activePackageId) opt.selected = true;
+                selectSubject.appendChild(opt);
+            });
+
+            populateFilterDropdowns();
+            updateStudioUI();
+        }
+
+        // Mengisi pilihan filter Mapel, Kelas, dan Materi
+        function populateFilterDropdowns() {
+            const mapels = new Set();
+            const kelases = new Set();
+            const materis = new Set();
+
+            Object.values(quizPackages).forEach(pkg => {
+                if (pkg.mapel) mapels.add(pkg.mapel);
+                if (pkg.kelas) kelases.add(pkg.kelas);
+                if (pkg.materi) materis.add(pkg.materi);
+            });
+
+            // Fill Mapel Filter
+            playFilterMapel.innerHTML = '<option value="ALL">✨ Semua Mapel</option>';
+            mapels.forEach(m => {
+                const opt = document.createElement('option');
+                opt.value = m;
+                opt.textContent = m;
+                playFilterMapel.appendChild(opt);
+            });
+
+            // Fill Kelas Filter
+            playFilterKelas.innerHTML = '<option value="ALL">🎓 Semua Kelas</option>';
+            kelases.forEach(k => {
+                const opt = document.createElement('option');
+                opt.value = k;
+                opt.textContent = k;
+                playFilterKelas.appendChild(opt);
+            });
+
+            // Fill Materi Filter
+            playFilterMateri.innerHTML = '<option value="ALL">📖 Semua Bab / Materi</option>';
+            materis.forEach(mat => {
+                const opt = document.createElement('option');
+                opt.value = mat;
+                opt.textContent = mat;
+                playFilterMateri.appendChild(opt);
+            });
+        }
+
+        // Listener Filter Interaktif untuk memilih paket terdekat
+        function applyPlayFilters() {
+            const selectedMapel = playFilterMapel.value;
+            const selectedKelas = playFilterKelas.value;
+            const selectedMateri = playFilterMateri.value;
+
+            const packages = Object.values(quizPackages);
+            const matched = packages.find(pkg => {
+                const mapelMatch = (selectedMapel === 'ALL' || pkg.mapel === selectedMapel);
+                const kelasMatch = (selectedKelas === 'ALL' || pkg.kelas === selectedKelas);
+                const materiMatch = (selectedMateri === 'ALL' || pkg.materi === selectedMateri);
+                return mapelMatch && kelasMatch && materiMatch;
+            });
+
+            if (matched) {
+                activePackageId = matched.id;
+                selectSubject.value = matched.id;
+                updateStudioUI();
+            }
+        }
+
+        playFilterMapel.addEventListener('change', applyPlayFilters);
+        playFilterKelas.addEventListener('change', applyPlayFilters);
+        playFilterMateri.addEventListener('change', applyPlayFilters);
+
+        function updateStudioUI() {
+            if (!activePackageId || !quizPackages[activePackageId]) return;
+            const current = quizPackages[activePackageId];
+
+            document.getElementById('input-quiz-subject').value = current.mapel || current.materi || "";
+            document.getElementById('input-quiz-materi').value = current.materi || "";
+            document.getElementById('select-quiz-grade').value = current.kelas || "Kelas 7 SMP";
+            document.getElementById('input-max-questions').value = current.maxSoal || 10;
+
+            const mapelTxt = current.mapel || current.materi || "Kuis";
+            const materiTxt = current.materi || "Umum";
+            document.getElementById('info-quiz-title').textContent = `${mapelTxt}`;
+            if (infoQuizSubdetail) {
+                infoQuizSubdetail.textContent = `Materi/Bab: ${materiTxt} (${current.kelas})`;
+            }
+            document.getElementById('info-quiz-meta').textContent = `${current.kelas} • ${current.soalList.length} Soal Tersimpan`;
+
+            renderQuestionListEditor();
+        }
+
+        // Auto-Fit Font Size berdasarkan panjang teks soal
+        function adjustQuestionFontSize(text) {
+            const len = text.length;
+            if (len > 120) {
+                hudQuestionText.style.fontSize = "16px";
+            } else if (len > 80) {
+                hudQuestionText.style.fontSize = "18px";
+            } else if (len > 50) {
+                hudQuestionText.style.fontSize = "21px";
+            } else {
+                hudQuestionText.style.fontSize = "24px";
+            }
+        }
+
+        function loadQuestion() {
+            if (questionIndex >= currentQuestions.length) {
+                showResultScreen();
+                return;
+            }
+
+            const q = currentQuestions[questionIndex];
+            hudQuestionNumber.textContent = `SOAL ${questionIndex + 1}/${currentQuestions.length}`;
+            hudQuestionText.textContent = q.soal;
+            
+            // Terapkan penyesuaian font otomatis
+            adjustQuestionFontSize(q.soal);
+
+            textOptionLeft.textContent = q.opsiKiri;
+            textOptionRight.textContent = q.opsiKanan;
+
+            resetHoldProgress();
+            isAnsweringLocked = false;
+            feedbackOverlay.classList.add('hidden');
+        }
+
+        // Input Listeners Studio Guru
+        document.getElementById('input-quiz-subject').addEventListener('change', (e) => {
+            quizPackages[activePackageId].mapel = e.target.value;
+            savePackagesToStorage();
+            renderPackageDropdown();
+        });
+        document.getElementById('input-quiz-materi').addEventListener('change', (e) => {
+            quizPackages[activePackageId].materi = e.target.value;
+            savePackagesToStorage();
+            renderPackageDropdown();
+        });
+        document.getElementById('select-quiz-grade').addEventListener('change', (e) => {
+            quizPackages[activePackageId].kelas = e.target.value;
+            savePackagesToStorage();
+            renderPackageDropdown();
+        });
+        document.getElementById('input-max-questions').addEventListener('change', (e) => {
+            quizPackages[activePackageId].maxSoal = parseInt(e.target.value) || 10;
+            savePackagesToStorage();
+            updateStudioUI();
+        });
+
+        // ==========================================
+        // AUTO-START KAMERA ON LOAD
+        // ==========================================
+        async function autoStartCameraOnLoad() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: { width: { ideal: 640 }, height: { ideal: 480 } }
+                });
+                videoElement.srcObject = stream;
+                videoElement.play();
+                console.log("Kamera IFP Berhasil Aktif Otomatis!");
+            } catch (err) {
+                console.warn("Kamera membutuhkan izin pengguna:", err);
+            }
+        }
+
+        // Init App On Loaded
+        window.addEventListener('DOMContentLoaded', () => {
+            initQuizPackages();
+            renderPackageDropdown();
+            autoStartCameraOnLoad();
+        });
+
+        // Tab Navigation Listeners
+        tabBtnPlay.addEventListener('click', () => {
+            tabBtnPlay.classList.add('active');
+            tabBtnStudio.classList.remove('active');
+            tabContentPlay.classList.remove('hidden');
+            tabContentStudio.classList.add('hidden');
+            tabContentStudio.style.display = 'none';
+        });
+
+        tabBtnStudio.addEventListener('click', () => {
+            tabBtnStudio.classList.add('active');
+            tabBtnPlay.classList.remove('active');
+            tabContentStudio.classList.remove('hidden');
+            tabContentStudio.style.display = 'flex';
+            tabContentPlay.classList.add('hidden');
+        });
+
+        // Buat Paket Kuis Baru
+        document.getElementById('btn-new-package').addEventListener('click', () => {
+            const newId = 'pkg_' + Date.now();
+            quizPackages[newId] = {
+                id: newId,
+                mapel: "Mata Pelajaran Baru",
+                materi: "Bab Baru",
+                kelas: "Kelas 7 SMP",
+                maxSoal: 10,
+                soalList: []
+            };
+            activePackageId = newId;
+            savePackagesToStorage();
+            renderPackageDropdown();
+        });
+
+        // Tambah Soal Manual Ke Paket Aktif
+        document.getElementById('btn-add-question').addEventListener('click', () => {
+            if (!activePackageId || !quizPackages[activePackageId]) return;
+            quizPackages[activePackageId].soalList.push({
+                soal: "Tulis pertanyaan di sini...",
+                opsiKiri: "Jawaban A",
+                opsiKanan: "Jawaban B",
+                jawabanBenar: "kiri"
+            });
+            savePackagesToStorage();
+            updateStudioUI();
+        });
+
+        // Hapus Paket Kuis Aktif
+        document.getElementById('btn-delete-package').addEventListener('click', () => {
+            if (Object.keys(quizPackages).length <= 1) {
+                alert("Minimal harus ada 1 paket kuis tersimpan!");
+                return;
+            }
+            delete quizPackages[activePackageId];
+            activePackageId = Object.keys(quizPackages)[0];
+            savePackagesToStorage();
+            renderPackageDropdown();
+        });
+
+        selectSubject.addEventListener('change', (e) => {
+            activePackageId = e.target.value;
+            updateStudioUI();
+        });
+
+        btnToggleAudio.addEventListener('click', () => {
+            soundFX.muted = !soundFX.muted;
+            btnToggleAudio.innerHTML = soundFX.muted 
+                ? `<i class="fa-solid fa-volume-xmark text-rose-400"></i>` 
+                : `<i class="fa-solid fa-volume-high text-sm"></i>`;
+        });
+
+        // Mulai Game
+        btnStartGame.addEventListener('click', () => {
+            soundFX.init();
+            soundFX.playTick();
+
+            const pkg = quizPackages[activePackageId];
+            if (!pkg || pkg.soalList.length === 0) {
+                alert("Paket ini belum memiliki soal! Tambahkan soal di Studio Guru terlebih dahulu.");
+                return;
+            }
+
+            currentQuestions = [...pkg.soalList];
+            hudMateriTitle.textContent = pkg.materi;
+            hudKelasSubtitle.textContent = pkg.kelas;
+
+            const maxLimit = pkg.maxSoal || 10;
+            if (currentQuestions.length > maxLimit) {
+                currentQuestions = currentQuestions.slice(0, maxLimit);
+            }
+
+            questionIndex = 0;
+            score = 0;
+            correctCount = 0;
+            hudScore.textContent = "0";
+
+            screenHome.classList.add('hidden');
+            screenResult.classList.add('hidden');
+            screenGameplay.classList.remove('hidden');
+
+            loadQuestion();
+        });
+
+        btnGoHome.addEventListener('click', resetToHome);
+        document.getElementById('btn-result-home').addEventListener('click', resetToHome);
+        document.getElementById('btn-restart-game').addEventListener('click', () => btnStartGame.click());
+
+        function resetToHome() {
+            screenGameplay.classList.add('hidden');
+            screenResult.classList.add('hidden');
+            screenHome.classList.remove('hidden');
+            resetHoldProgress();
+        }
+
+        function loadQuestion() {
+            if (questionIndex >= currentQuestions.length) {
+                showResultScreen();
+                return;
+            }
+
+            const q = currentQuestions[questionIndex];
+            hudQuestionNumber.textContent = `SOAL ${questionIndex + 1}/${currentQuestions.length}`;
+            hudQuestionText.textContent = q.soal;
+            textOptionLeft.textContent = q.opsiKiri;
+            textOptionRight.textContent = q.opsiKanan;
+
+            resetHoldProgress();
+            isAnsweringLocked = false;
+            feedbackOverlay.classList.add('hidden');
+        }
+
+        function resetHoldProgress() {
+            holdStartTime = null;
+            progressFillLeft.style.width = '0%';
+            progressFillRight.style.width = '0%';
+            cardOptionLeft.classList.remove('active', 'card-left-active');
+            cardOptionRight.classList.remove('active', 'card-right-active');
+        }
+
+        // Processing Answer Selection
+        function processAnswer(selectedZone) {
+            if (isAnsweringLocked) return;
+            isAnsweringLocked = true;
+
+            const q = currentQuestions[questionIndex];
+            if (!q) return;
+
+            const isCorrect = (selectedZone.toLowerCase() === q.jawabanBenar.toLowerCase());
+
+            feedbackOverlay.classList.remove('hidden');
+            if (isCorrect) {
+                soundFX.playCorrect();
+                score += 20;
+                correctCount++;
+                hudScore.textContent = score;
+
+                feedbackIconBox.className = "w-28 h-28 rounded-full flex items-center justify-center text-6xl mb-4 shadow-2xl bg-emerald-400 text-slate-950 animate-bounce";
+                feedbackIconBox.innerHTML = `<i class="fa-solid fa-check"></i>`;
+                feedbackTitle.textContent = "BENAR MANTAP! 🎉";
+                feedbackSubtitle.textContent = "+20 Poin dimasukkan!";
+            } else {
+                soundFX.playWrong();
+                feedbackIconBox.className = "w-28 h-28 rounded-full flex items-center justify-center text-6xl mb-4 shadow-2xl bg-rose-500 text-white animate-bounce";
+                feedbackIconBox.innerHTML = `<i class="fa-solid fa-xmark"></i>`;
+                feedbackTitle.textContent = "HAMPIR BISA! 😅";
+                feedbackSubtitle.textContent = `Jawaban Benar: ${q.jawabanBenar === 'kiri' ? 'KIRI (A)' : 'KANAN (B)'}`;
+            }
+
+            setTimeout(() => {
+                questionIndex++;
+                loadQuestion();
+            }, 1200);
+        }
+
+        function showResultScreen() {
+            soundFX.playFinish();
+            screenGameplay.classList.add('hidden');
+            screenResult.classList.remove('hidden');
+
+            document.getElementById('result-subject-text').textContent = `${hudMateriTitle.textContent} - ${hudKelasSubtitle.textContent}`;
+            document.getElementById('result-final-score').textContent = score;
+            document.getElementById('result-correct-count').textContent = `${correctCount}/${currentQuestions.length}`;
+            const acc = Math.round((correctCount / currentQuestions.length) * 100) || 0;
+            document.getElementById('result-accuracy').textContent = `${acc}%`;
+        }
+
+        // Toggle Mirror Camera
+        btnToggleMirror.addEventListener('click', () => {
+            isCameraMirrored = !isCameraMirrored;
+            const canvasEl = document.getElementById('canvas-pose');
+            if (isCameraMirrored) {
+                canvasEl.classList.add('mirror-canvas');
+                labelMirrorStatus.textContent = "Kamera: Cermin";
+            } else {
+                canvasEl.classList.remove('mirror-canvas');
+                labelMirrorStatus.textContent = "Kamera: Normal";
+            }
+        });
+
+        // Impor Gemini Modal Logic
+        const modalImport = document.getElementById('modal-import');
+        document.getElementById('btn-import-gemini').addEventListener('click', () => modalImport.classList.remove('hidden'));
+        document.getElementById('btn-cancel-import').addEventListener('click', () => modalImport.classList.add('hidden'));
+        document.getElementById('btn-apply-import').addEventListener('click', () => {
+            const raw = document.getElementById('textarea-import-json').value;
+            try {
+                const parsed = JSON.parse(raw);
+                if (Array.isArray(parsed) && activePackageId) {
+                    quizPackages[activePackageId].soalList = parsed;
+                    savePackagesToStorage();
+                    renderQuestionListEditor();
+                    updateStudioUI();
+                    modalImport.classList.add('hidden');
+                }
+            } catch(e) {
+                alert("Format JSON tidak valid!");
+            }
+        });
+
+        // ==========================================
+        // 4. MEDIAPIPE POSE DETECTION (SPLIT SCREEN READY)
+        // ==========================================
+        // 4. MEDIAPIPE POSE DETECTION (STABLE WASM FIX)
+        // ==========================================
+        const videoElement = document.getElementById('video-feed');
+        const canvasElement = document.getElementById('canvas-pose');
+        const canvasCtx = canvasElement.getContext('2d');
+
+        function onResults(results) {
+            canvasCtx.save();
+            canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+            
+            if (results.image) {
+                canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
+            }
+
+            if (results.poseLandmarks && screenGameplay.classList.contains('hidden') === false) {
+                const nose = results.poseLandmarks[0];
+                const leftShoulder = results.poseLandmarks[11];
+                const rightShoulder = results.poseLandmarks[12];
+
+                if (nose && leftShoulder && rightShoulder) {
+                    let centerX = (nose.x + leftShoulder.x + rightShoulder.x) / 3;
+                    let newZone = 'TENGAH';
+                    
+                    if (isCameraMirrored) {
+                        if (centerX > 0.60) newZone = 'KIRI';
+                        else if (centerX < 0.40) newZone = 'KANAN';
+                    } else {
+                        if (centerX < 0.40) newZone = 'KIRI';
+                        else if (centerX > 0.60) newZone = 'KANAN';
+                    }
+
+                    activeZone = newZone;
+                    badgeCurrentZone.textContent = `POSISI: ${activeZone}`;
+
+                    canvasCtx.fillStyle = '#38bdf8';
+                    canvasCtx.beginPath();
+                    canvasCtx.arc(centerX * canvasElement.width, nose.y * canvasElement.height, 14, 0, 2 * Math.PI);
+                    canvasCtx.fill();
+
+                    if (!isAnsweringLocked) {
+                        if (activeZone === 'KIRI' || activeZone === 'KANAN') {
+                            if (!holdStartTime) {
+                                holdStartTime = Date.now();
+                            }
+                            const elapsed = Date.now() - holdStartTime;
+                            const pct = Math.min(100, (elapsed / HOLD_DURATION) * 100);
+
+                            if (activeZone === 'KIRI') {
+                                cardOptionLeft.classList.add('active', 'card-left-active');
+                                cardOptionRight.classList.remove('active', 'card-right-active');
+                                progressFillLeft.style.width = `${pct}%`;
+                                progressFillRight.style.width = '0%';
+                            } else {
+                                cardOptionRight.classList.add('active', 'card-right-active');
+                                cardOptionLeft.classList.remove('active', 'card-left-active');
+                                progressFillRight.style.width = `${pct}%`;
+                                progressFillLeft.style.width = '0%';
+                            }
+
+                            soundFX.playTick();
+
+                            if (elapsed >= HOLD_DURATION) {
+                                processAnswer(activeZone);
+                            }
+                        } else {
+                            resetHoldProgress();
+                        }
+                    }
+                }
+            }
+            canvasCtx.restore();
+        }
+
+        const pose = new Pose({
+            locateFile: (file) => {
+                return `https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5.1675469404/${file}`;
+            }
+        });
+
+        pose.setOptions({
+            modelComplexity: 0,
+            smoothLandmarks: true,
+            minDetectionConfidence: 0.5,
+            minTrackingConfidence: 0.5
+        });
+
+        pose.onResults(onResults);
+
+        // SAFE CAMERA INITIALIZATION WITH FALLBACK
+        function startCameraLoop() {
+            if (typeof Camera !== 'undefined') {
+                const camera = new Camera(videoElement, {
+                    onFrame: async () => {
+                        try {
+                            await pose.send({ image: videoElement });
+                        } catch(e) {
+                            console.warn("Pose detection frame dropped:", e);
+                        }
+                    },
+                    width: 320,
+                    height: 240
+                });
+                camera.start().catch(err => {
+                    console.warn("Kamera tidak dapat dimulai via Camera Utils, menggunakan fallback loop:", err);
+                    startNativeVideoLoop();
+                });
+            } else {
+                console.warn("MediaPipe Camera Utils tidak ditemukan, beralih ke Fallback Native Loop.");
+                startNativeVideoLoop();
+            }
+        }
+
+        function startNativeVideoLoop() {
+            async function processFrame() {
+                if (videoElement.readyState >= 2) {
+                    try {
+                        await pose.send({ image: videoElement });
+                    } catch(e) {}
+                }
+                requestAnimationFrame(processFrame);
+            }
+            requestAnimationFrame(processFrame);
+        }
+
+        // Jalankan pengulangan kamera setelah video dimuat
+        videoElement.addEventListener('loadeddata', () => {
+            startCameraLoop();
+        });
+    </script>
+</body>
+</html>
